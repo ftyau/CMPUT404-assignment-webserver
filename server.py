@@ -1,8 +1,9 @@
 import SocketServer
 import os
+import time
 # coding: utf-8
 
-# Copyright 2013 Abram Hindle, Eddie Antonio Santos
+# Copyright 2013 Abram Hindle, Eddie Antonio Santos, Frank Yau
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,10 +31,13 @@ import os
 
 class MyWebServer(SocketServer.BaseRequestHandler):
 
+    # Opens the requested file and sends it with the approppriate
+    # headers
     def serve_file(self, path, extension):
         file_content = open(path, "r")
         if extension == "css" or extension == "html":
             header = "HTTP/1.1 200 OK\r\n"
+            header += "Date: " + self.get_time()
             header += "Content-Type: text/" + extension + "\r\n\r\n"
         else:
             header = "HTTP/1.1 200 OK\r\n\r\n"
@@ -42,8 +46,10 @@ class MyWebServer(SocketServer.BaseRequestHandler):
         file_content.close()
         return
 
+    # Sends a 404 response message with some information for the user
     def file_not_found(self):
         header = "HTTP/1.1 404 Not Found\r\n"
+        header += "Date: " + self.get_time()
         header += "Content-Type: text/html\r\n\r\n"
 
         content = "<html><body>\n"
@@ -53,6 +59,12 @@ class MyWebServer(SocketServer.BaseRequestHandler):
 
         self.request.sendall(header + content)
 
+    # Gets GMT time for the header
+    def get_time(self):
+        time_format = "%a, %b %d %Y %H:%M:%S GMT\r\n"
+        current_time = time.gmtime()
+        return time.strftime(time_format, current_time)
+
     def handle(self):
         self.data = self.request.recv(1024).strip()
         print ("Got a request of: %s\n" % self.data)
@@ -60,9 +72,13 @@ class MyWebServer(SocketServer.BaseRequestHandler):
         get_request = request_data[0].split(" ")
         file_request = get_request[1]
 
+        # Serves the contents of index.html if the user accesses a 
+        # directory instead of a file
         if file_request[-1] == "/":
             file_request += "index.html"
 
+        # Checks for the user attempting to access files that they
+        # should not be accessing
         security_check = file_request.split("/")
         if ".." in security_check:
             self.file_not_found()
