@@ -58,6 +58,16 @@ class MyWebServer(SocketServer.BaseRequestHandler):
         content += "</body></html>"
 
         self.request.sendall(header + content)
+        return
+
+    # Redirects the user to another page
+    def redirect(self, location):
+        header = "HTTP/1.1 301 Moved Permanently\r\n"
+        header += "Date: " + self.get_time()
+        header += "Location: " + location + "\r\n\r\n"
+        
+        self.request.sendall(header)
+        return
 
     # Gets GMT time for the header
     def get_time(self):
@@ -73,9 +83,13 @@ class MyWebServer(SocketServer.BaseRequestHandler):
         file_request = get_request[1]
 
         # Serves the contents of index.html if the user accesses a 
-        # directory instead of a file
+        # directory instead of a file.
         if file_request[-1] == "/":
             file_request += "index.html"
+        # Redirects user to /deep/ if /deep is accessed.
+        elif file_request == "/deep":
+            self.redirect("/deep/")
+            return
 
         # Checks for the user attempting to access files that they
         # should not be accessing
